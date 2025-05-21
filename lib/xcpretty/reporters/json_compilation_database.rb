@@ -30,15 +30,32 @@ module XCPretty
     end
 
     def format_compile_command(compiler_command, file_path)
-      directory = file_path.gsub("#{@current_path}", '').gsub(/\/$/, '')
+      # Handle the case where @current_path is nil
+      if @current_path.nil?
+        directory = file_path.gsub(/\/$/, '') # Remove trailing slash if present
+        directory = '/' if directory.empty?
+        file = directory
+      else
+        directory = file_path.gsub("#{@current_path}", '').gsub(/\/$/, '')
+        directory = '/' if directory.empty?
+        file = @current_path
+      end
+    
+      # If directory is empty, set it to "/"
       directory = '/' if directory.empty?
-
+    
+      # If directory ends with a file extension, truncate to the previous "/"
+      if directory.match?(/\.(?:m|mm|c|cc|cpp|cxx|swift)$/)
+        directory = directory.sub(/\/[^\/]+$/, '')
+        directory = '/' if directory.empty?
+      end
+    
+      # Replace the .pch path if @pch_path is provided
       cmd = compiler_command
       cmd = cmd.gsub(/(\-include)\s.*\.pch/, "\\1 #{@pch_path}") if @pch_path
-
-      @compilation_units << {command: cmd,
-                             file: @current_path,
-                             directory: directory}
+    
+      # Add the compilation unit to the list
+      @compilation_units << { command: cmd, file: file, directory: directory }
     end
 
     def write_report
